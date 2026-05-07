@@ -1,0 +1,4 @@
+unit_id,start_time,end_time,severity,risk_score,confidence,likely_issue,symptoms,duration_minutes
+HVAC_1,2026-01-01 12:35:00,2026-01-01 16:35:00,high,80,90,Possible fan or motor degradation,"['high vibration', 'low airflow', 'high power consumption']",240.0
+HVAC_2,2026-01-01 04:10:00,2026-01-01 04:15:00,critical,90,95,Possible fan or motor degradation,"['high vibration', 'low airflow', 'high temperature']",5.0
+HVAC_2,2026-01-01 10:00:00,2026-01-01 10:00:00,high,70,85,Possible fan or motor degradation,"['high vibration', 'low airflow']",0.0
