@@ -2,3 +2,6 @@ pandas
 matplotlib
 scikit-learn
 jupyter
+fastapi
+uvicorn
+python-multipart
