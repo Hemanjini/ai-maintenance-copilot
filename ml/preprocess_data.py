@@ -68,19 +68,101 @@ df["vibration_rolling_mean"] = (
 # Here we define "Red Lines" for our HVAC systems based on known safety limits.
 # These binary flags (True/False) make it easy for machine learning models to 
 # pick up on critical failures.
-df["high_vibration"] = df["vibration"] > 0.08  # Indicates potential mechanical wear
-df["low_airflow"] = df["airflow"] < 250        # Indicates potential filter blockage
-df["high_temp"] = df["temp"] > 28              # Indicates overheating
-df["high_power"] = df["power"] > 7             # Indicates motor inefficiency
+
+THRESHOLDS = {
+
+    "vibration": {
+        "warning": 0.08,
+        "critical": 0.15
+    },
+
+    "airflow": {
+        "warning": 250,
+        "critical": 220
+    },
+
+    "temperature": {
+        "warning": 28,
+        "critical": 35
+    },
+
+    "power": {
+        "warning": 6,
+        "critical": 8
+    }
+}
+
+def vibration_state(v):
+
+    if v > THRESHOLDS["vibration"]["critical"]:
+        return "critical"
+
+    elif v > THRESHOLDS["vibration"]["warning"]:
+        return "warning"
+
+    return "normal"
+
+
+def airflow_state(a):
+
+    if a < THRESHOLDS["airflow"]["critical"]:
+        return "critical"
+
+    elif a < THRESHOLDS["airflow"]["warning"]:
+        return "warning"
+
+    return "normal"
+
+
+def temperature_state(t):
+
+    if t > THRESHOLDS["temperature"]["critical"]:
+        return "critical"
+
+    elif t > THRESHOLDS["temperature"]["warning"]:
+        return "warning"
+
+    return "normal"
+
+
+def power_state(p):
+
+    if p > THRESHOLDS["power"]["critical"]:
+        return "critical"
+
+    elif p > THRESHOLDS["power"]["warning"]:
+        return "warning"
+
+    return "normal"
+
+# Apply state functions
+df["vibration_state"] = df["vibration"].apply(vibration_state)
+df["airflow_state"] = df["airflow"].apply(airflow_state)
+df["temperature_state"] = df["temp"].apply(temperature_state)
+df["power_state"] = df["power"].apply(power_state)
 
 # STEP 11: Maintenance Risk Scoring
 # We combine our flags into a single 'Risk Score' (0-100).
 # We weight vibration highest (40 points) as it often precedes major failure.
+SEVERITY_SCORES = {
+    "normal": 0,
+    "warning": 1,
+    "critical": 2
+}
+
 df["risk_score"] = (
-    df["high_vibration"].astype(int) * 40 +
-    df["low_airflow"].astype(int) * 30 +
-    df["high_temp"].astype(int) * 20 +
-    df["high_power"].astype(int) * 10
+
+    df["vibration_state"]
+    .map(SEVERITY_SCORES) * 35 +
+
+    df["airflow_state"]
+    .map(SEVERITY_SCORES) * 30 +
+
+    df["temperature_state"]
+    .map(SEVERITY_SCORES) * 20 +
+
+    df["power_state"]
+    .map(SEVERITY_SCORES) * 15
 )
 
 # STEP 12: Save the Cleaned & Enhanced Data

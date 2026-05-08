@@ -5,6 +5,7 @@ from services.data_service import (
     get_health_scores,
     get_all_units
 )
+from services.llm_services import generate_incident_summary
 
 app = FastAPI(
     title="AI Maintenance Copilot API"
@@ -44,3 +45,23 @@ def get_health():
 def get_units():
 
     return get_all_units()
+
+
+@app.get("/incident-analysis/{incident_index}")
+
+def incident_analysis(incident_index: int):
+
+    incidents = load_incidents()
+
+    incident = (
+        incidents.iloc[incident_index]
+        .to_dict()
+    )
+
+    analysis = generate_incident_summary(
+        incident
+    )
+
+    return {
+        "analysis": analysis
+    }

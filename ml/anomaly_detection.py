@@ -72,24 +72,56 @@ print(anomalies[
 # STEP: Severity Classification
 # We categorize anomalies to help maintenance teams prioritize their response.
 def classify_severity(row):
-    if row["risk_score"] >= 80:
-        return "critical"
-    elif row["risk_score"] >= 40:
-        return "high"
-    elif row["anomaly"] == 1:
-        return "medium"  # AI-detected behavioral anomaly (early warning)
-    else:
-        return "normal"
 
-# Apply classification
+    # -----------------------------------
+    # Critical:
+    # Active thermal danger
+    # -----------------------------------
+
+    if (
+        row["temp"] > 35
+    ):
+        return "critical"
+
+    # -----------------------------------
+    # High:
+    # Severe mechanical degradation
+    # -----------------------------------
+
+    elif (
+        row["vibration"] > 0.15 and
+        row["airflow"] < 250
+    ):
+        return "high"
+
+    # -----------------------------------
+    # Medium:
+    # AI anomaly or moderate instability
+    # -----------------------------------
+
+    elif (
+        row["anomaly"] == 1 or
+        row["risk_score"] >= 70
+    ):
+        return "medium"
+
+    # -----------------------------------
+    # Normal
+    # -----------------------------------
+
+    return "normal"
 df["severity"] = df.apply(classify_severity, axis=1)
 
 df["health_score"] = 100 - (
     df["risk_score"] +
-    (df["anomaly"] * 20)
+    (df["anomaly"] * 10)
 )
 
-df["health_score"] = df["health_score"].clip(lower=0)
+df["health_score"] = (
+    df["health_score"]
+    .clip(lower=0, upper=100)
+)
+
 
 # Save final output with severity
 df.to_csv("../data/final_hvac_analysis.csv", index=False)
