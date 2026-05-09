@@ -2,6 +2,33 @@ import pandas as pd
 
 INCIDENTS_PATH = "../data/incidents.csv"
 ANALYSIS_PATH = "../data/final_hvac_analysis.csv"
+PROCESSED_DATA_PATH = "../data/processed_hvac_data.csv"
+
+def get_incident_telemetry(unit_id: str, start_time: str, end_time: str):
+    """Returns time-series data for a specific unit and time range."""
+    try:
+        df = pd.read_csv(PROCESSED_DATA_PATH)
+        
+        # Filter by unit
+        unit_data = df[df['unit_id'] == unit_id].copy()
+        
+        # Filter by time range
+        unit_data['timestamp'] = pd.to_datetime(unit_data['timestamp'])
+        mask = (unit_data['timestamp'] >= pd.to_datetime(start_time)) & \
+               (unit_data['timestamp'] <= pd.to_datetime(end_time))
+        
+        filtered = unit_data.loc[mask].sort_values('timestamp')
+        
+        # Select relevant columns for charting
+        result = filtered[['timestamp', 'vibration', 'airflow', 'temp', 'power', 'risk_score']].copy()
+        
+        # Convert timestamp to string for JSON (Format: HH:mm)
+        result['timestamp'] = result['timestamp'].dt.strftime('%H:%M')
+        
+        return result.to_dict(orient='records')
+    except Exception as e:
+        print(f"Telemetry Fetch Error: {e}")
+        return []
 
 
 def load_incidents():

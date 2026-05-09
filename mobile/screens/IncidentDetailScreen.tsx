@@ -3,14 +3,15 @@ import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Sta
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { fetchIncidentAnalysis } from '../services/api';
+import { fetchIncidentAnalysis, fetchIncidentTelemetry } from '../services/api';
+import TrendChart from '../components/TrendChart';
 
 const IncidentDetailScreen = () => {
   const params = useLocalSearchParams();
   const router = useRouter();
 
   const incident = {
-    unit_id: params.unit_id,
+    unit_id: params.unit_id as string,
     severity: params.severity as string,
     primary_issue: params.primary_issue as string,
     contributing_factors: params.contributing_factors as string,
@@ -26,6 +27,29 @@ const IncidentDetailScreen = () => {
     ai_guidance: params.ai_guidance as string,
     index: parseInt(params.index as string),
   };
+
+  const [telemetry, setTelemetry] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const data = await fetchIncidentTelemetry(incident.unit_id, incident.start_time, incident.end_time);
+        setTelemetry(data);
+      } catch (err) {
+        console.error("Chart data fetch failed", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, [incident.unit_id, incident.start_time]);
+
+  // Map data for charts
+  const vibData = telemetry.map(d => ({ value: parseFloat(d.vibration.toFixed(3)), label: d.timestamp }));
+  const airData = telemetry.map(d => ({ value: Math.round(d.airflow), label: d.timestamp }));
+  const tempData = telemetry.map(d => ({ value: Math.round(d.temp), label: d.timestamp }));
+  const riskData = telemetry.map(d => ({ value: Math.round(d.risk_score), label: d.timestamp }));
 
 
   const getStatusConfig = (severity: string) => {
@@ -130,6 +154,42 @@ const IncidentDetailScreen = () => {
               </View>
             ))}
           </View>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionLabel}>VISUAL TECHNICAL EVIDENCE</Text>
+          
+          {loading ? (
+            <ActivityIndicator size="large" color="#6366F1" style={{ marginVertical: 40 }} />
+          ) : (
+            <>
+              <TrendChart 
+                title="Vibration Trend (Mechanical Load)" 
+                unit="mm/s" 
+                theme="vibration" 
+                data={vibData} 
+              />
+              <TrendChart 
+                title="Airflow Stability (Efficiency)" 
+                unit="CFM" 
+                theme="airflow" 
+                data={airData} 
+              />
+              <TrendChart 
+                title="Thermal Signature (Temperature)" 
+                unit="°C" 
+                theme="temp" 
+                data={tempData} 
+              />
+              <TrendChart 
+                title="Risk Score Escalation" 
+                unit="" 
+                theme="risk" 
+                data={riskData} 
+                maxValue={200}
+              />
+            </>
+          )}
         </View>
 
         <TouchableOpacity style={styles.actionButton}>

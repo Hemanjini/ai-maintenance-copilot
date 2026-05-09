@@ -38,4 +38,26 @@ export const fetchIncidentAnalysis = async (index: number) => {
   }
 };
 
+export const fetchIncidentTelemetry = async (unitId: string, startTime: string, endTime: string) => {
+  try {
+    const response = await api.get('/incidents/telemetry', {
+      params: { unit_id: unitId, start_time: startTime, end_time: endTime }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching telemetry:', error);
+    return [];
+  }
+};
+
+export const fetchDashboardStats = async () => {
+  try {
+    const response = await api.get('/dashboard-stats');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+    return null;
+  }
+};
+
 export default api;

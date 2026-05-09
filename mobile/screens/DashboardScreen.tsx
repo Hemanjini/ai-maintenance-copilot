@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, SafeAreaView, StatusBar, TouchableOpacity, TextInput } from 'react-native';
 import IncidentCard from '../components/IncidentCard';
-import { fetchIncidents } from '../services/api';
+import { fetchIncidents, fetchDashboardStats } from '../services/api';
+import SeverityDonut from '../components/SeverityDonut';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,15 +13,20 @@ const DashboardScreen = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
+  const [stats, setStats] = useState<any>(null);
 
   useEffect(() => {
-    loadIncidents();
+    loadData();
   }, []);
 
-  const loadIncidents = async () => {
+  const loadData = async () => {
     try {
-      const data = await fetchIncidents();
-      setIncidents(data);
+      const [incidentsData, statsData] = await Promise.all([
+        fetchIncidents(),
+        fetchDashboardStats()
+      ]);
+      setIncidents(incidentsData);
+      setStats(statsData);
     } catch (error) {
       console.error(error);
     } finally {
@@ -91,11 +97,23 @@ const DashboardScreen = () => {
         data={filteredIncidents}
         contentContainerStyle={styles.listContent}
         keyExtractor={(item: any) => item.start_time + item.unit_id}
+        ListHeaderComponent={
+          <View style={styles.dashboardCharts}>
+            <Text style={styles.sectionLabel}>FLEET RISK DISTRIBUTION</Text>
+            {stats ? (
+              <SeverityDonut distribution={stats.severity_distribution} />
+            ) : (
+              <View style={styles.chartPlaceholder} />
+            )}
+            
+            <View style={{ height: 24 }} />
+            <Text style={styles.sectionLabel}>ACTIVE INCIDENTS</Text>
+          </View>
+        }
         renderItem={({ item, index }) => (
           <IncidentCard
             incident={item}
             onPress={() => {
-              // We find the index in the original array to match the backend CSV index
               const originalIndex = incidents.indexOf(item);
               router.push({
                 pathname: "/incident/[id]",
@@ -224,8 +242,25 @@ const styles = StyleSheet.create({
     color: '#FFF',
   },
   listContent: {
-    paddingTop: 12,
+    paddingTop: 24,
     paddingBottom: 40,
+    paddingHorizontal: 16,
+  },
+  dashboardCharts: {
+    marginBottom: 16,
+  },
+  sectionLabel: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#64748B',
+    letterSpacing: 1.5,
+    marginBottom: 12,
+    textTransform: 'uppercase',
+  },
+  chartPlaceholder: {
+    height: 140,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 16,
   },
   emptyContainer: {
     alignItems: 'center',
