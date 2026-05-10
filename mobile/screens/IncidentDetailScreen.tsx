@@ -34,7 +34,22 @@ const IncidentDetailScreen = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const data = await fetchIncidentTelemetry(incident.unit_id, incident.start_time, incident.end_time);
+        // Helper to format date for backend
+        const formatDate = (date: Date) => {
+          const pad = (n: number) => n < 10 ? '0' + n : n;
+          return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+        };
+
+        // Expand the window to show the "Pattern of Failure" leading up to the incident
+        const incidentStart = new Date(incident.start_time);
+        const incidentEnd = new Date(incident.end_time || incident.start_time);
+        
+        // Look 3 hours before the incident starts to see the degradation trend
+        // Look 1 hour after the incident ends (or current state)
+        const expandedStart = formatDate(new Date(incidentStart.getTime() - 3 * 60 * 60 * 1000));
+        const expandedEnd = formatDate(new Date(incidentEnd.getTime() + 1 * 60 * 60 * 1000));
+
+        const data = await fetchIncidentTelemetry(incident.unit_id, expandedStart, expandedEnd);
         setTelemetry(data);
       } catch (err) {
         console.error("Chart data fetch failed", err);
@@ -45,11 +60,13 @@ const IncidentDetailScreen = () => {
     loadData();
   }, [incident.unit_id, incident.start_time]);
 
-  // Map data for charts
-  const vibData = telemetry.map(d => ({ value: parseFloat(d.vibration.toFixed(3)), label: d.timestamp }));
-  const airData = telemetry.map(d => ({ value: Math.round(d.airflow), label: d.timestamp }));
-  const tempData = telemetry.map(d => ({ value: Math.round(d.temp), label: d.timestamp }));
-  const riskData = telemetry.map(d => ({ value: Math.round(d.risk_score), label: d.timestamp }));
+  // Map data for charts with safety checks for missing telemetry fields
+  const vibData = telemetry.map(d => ({ value: parseFloat((d.vibration || 0).toFixed(3)), label: d.timestamp }));
+  const airData = telemetry.map(d => ({ value: Math.round(d.airflow || 0), label: d.timestamp }));
+  const tempData = telemetry.map(d => ({ value: Math.round(d.temp || 0), label: d.timestamp }));
+  const pressData = telemetry.map(d => ({ value: parseFloat((d.pressure || 0).toFixed(2)), label: d.timestamp }));
+  const powerData = telemetry.map(d => ({ value: parseFloat((d.power || 0).toFixed(2)), label: d.timestamp }));
+  const riskData = telemetry.map(d => ({ value: Math.round(d.risk_score || 0), label: d.timestamp }));
 
 
   const getStatusConfig = (severity: string) => {
@@ -180,6 +197,18 @@ const IncidentDetailScreen = () => {
                 unit="°C" 
                 theme="temp" 
                 data={tempData} 
+              />
+              <TrendChart 
+                title="Pressure Profile (Stability)" 
+                unit="Bar" 
+                theme="pressure" 
+                data={pressData} 
+              />
+              <TrendChart 
+                title="Electrical Load (Power)" 
+                unit="kW" 
+                theme="power" 
+                data={powerData} 
               />
               <TrendChart 
                 title="Risk Score Escalation" 

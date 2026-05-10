@@ -50,9 +50,9 @@ export default function HealthScreen() {
     setFetchingChart(true);
     
     try {
-      // Fetch a 2-hour window from the dataset
-      const startTime = "2026-01-01 00:00:00";
-      const endTime = "2026-01-01 02:00:00";
+      // Syncing with the actual January 2026 dataset range
+      const startTime = '2026-01-01 12:00:00';
+      const endTime = '2026-01-01 16:35:00';
       const data = await fetchIncidentTelemetry(unitId, startTime, endTime);
       setTelemetryData(data);
     } catch (err) {
@@ -142,10 +142,16 @@ export default function HealthScreen() {
                   onPress={() => openMetricChart(unit.unit_id, 'vibration')}
                 />
                 <MetricBox 
+                  icon="gauge" 
+                  label="PRESSURE" 
+                  value={unit.avg_pressure?.toFixed(2) ?? 'N/A'} 
+                  onPress={() => openMetricChart(unit.unit_id, 'pressure')}
+                />
+                <MetricBox 
                   icon="lightning-bolt" 
                   label="POWER" 
                   value={unit.avg_power?.toFixed(1) ?? 'N/A'} 
-                  onPress={() => openMetricChart(unit.unit_id, 'risk')}
+                  onPress={() => openMetricChart(unit.unit_id, 'power')}
                 />
               </View>
             </View>
@@ -180,13 +186,21 @@ export default function HealthScreen() {
               <View style={styles.modalChart}>
                 <TrendChart 
                   title={`${selectedMetric?.toUpperCase()} Stability`}
-                  unit={selectedMetric === 'temp' ? '°C' : selectedMetric === 'airflow' ? 'CFM' : selectedMetric === 'vibration' ? 'mm/s' : ''}
+                  unit={
+                    selectedMetric === 'temp' ? '°C' : 
+                    selectedMetric === 'airflow' ? 'CFM' : 
+                    selectedMetric === 'vibration' ? 'mm/s' : 
+                    selectedMetric === 'pressure' ? 'Bar' :
+                    selectedMetric === 'power' ? 'kW' : ''
+                  }
                   theme={selectedMetric as any}
                   data={telemetryData.map(d => ({
-                    value: selectedMetric === 'temp' ? d.temp : 
-                           selectedMetric === 'airflow' ? d.airflow : 
-                           selectedMetric === 'vibration' ? d.vibration : 
-                           d.risk_score,
+                    value: selectedMetric === 'temp' ? (d.temp || 0) : 
+                           selectedMetric === 'airflow' ? (d.airflow || 0) : 
+                           selectedMetric === 'vibration' ? (d.vibration || 0) : 
+                           selectedMetric === 'pressure' ? (d.pressure || 0) :
+                           selectedMetric === 'power' ? (d.power || 0) :
+                           (d.risk_score || 0),
                     label: d.timestamp
                   }))}
                 />

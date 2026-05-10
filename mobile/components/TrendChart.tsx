@@ -11,7 +11,7 @@ interface TrendChartProps {
   data: DataPoint[];
   title: string;
   unit: string;
-  theme: 'vibration' | 'airflow' | 'temp' | 'risk';
+  theme: 'vibration' | 'airflow' | 'temp' | 'risk' | 'pressure' | 'power';
   maxValue?: number;
 }
 
@@ -31,6 +31,16 @@ const THEMES = {
     gradient: ['#FDE047', '#EAB308'],
     label: 'TMP',
   },
+  pressure: {
+    color: '#10B981',
+    gradient: ['#34D399', '#10B981'],
+    label: 'PRS',
+  },
+  power: {
+    color: '#8B5CF6',
+    gradient: ['#A78BFA', '#8B5CF6'],
+    label: 'PWR',
+  },
   risk: {
     color: '#6366F1',
     gradient: ['#818CF8', '#6366F1'],
@@ -41,6 +51,11 @@ const THEMES = {
 const TrendChart = ({ data, title, unit, theme, maxValue }: TrendChartProps) => {
   const currentTheme = THEMES[theme];
   const screenWidth = Dimensions.get('window').width;
+  
+  const chartWidth = screenWidth - 130;
+  // Calculate dynamic spacing to ensure the chart fills the available width
+  const dynamicSpacing = (chartWidth - 20) / (data.length > 1 ? data.length - 1 : 1);
+  const spacing = Math.max(2, dynamicSpacing);
 
   if (!data || data.length === 0) {
     return (
@@ -53,6 +68,26 @@ const TrendChart = ({ data, title, unit, theme, maxValue }: TrendChartProps) => 
     );
   }
 
+  // Generate 5 clean labels for the footer
+  const getFooterLabels = () => {
+    if (data.length < 2) return [data[0]?.label?.split(' ')[1]?.substring(0, 5) || ''];
+    
+    const indices = [
+      0, 
+      Math.floor(data.length * 0.25),
+      Math.floor(data.length * 0.5),
+      Math.floor(data.length * 0.75),
+      data.length - 1
+    ];
+    
+    return indices.map(idx => {
+      const label = data[idx]?.label || '';
+      return label.includes(' ') ? label.split(' ')[1].substring(0, 5) : label.substring(0, 5);
+    });
+  };
+
+  const footerLabels = getFooterLabels();
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -62,48 +97,54 @@ const TrendChart = ({ data, title, unit, theme, maxValue }: TrendChartProps) => 
         </View>
       </View>
 
-      <LineChart
-        data={data}
-        width={screenWidth - 80}
-        height={180}
-        spacing={screenWidth / (data.length > 0 ? data.length + 2 : 10)}
-        initialSpacing={10}
-        color={currentTheme.color}
-        thickness={3}
-        startFillColor={currentTheme.color}
-        endFillColor="transparent"
-        startOpacity={0.4}
-        endOpacity={0}
-        noOfSections={3}
-        yAxisColor="#CBD5E1"
-        yAxisThickness={1}
-        yAxisLabelContainerStyle={{ width: 40 }}
-        yAxisTextStyle={{ color: '#64748B', fontSize: 10 }}
-        xAxisColor="#CBD5E1"
-        pointerConfig={{
-          pointerStripHeight: 140,
-          pointerStripColor: '#94A3B8',
-          pointerStripWidth: 2,
-          pointerColor: currentTheme.color,
-          radius: 6,
-          pointerLabelComponent: (items: any) => (
-            <View style={styles.labelContainer}>
-              <Text style={styles.labelText}>{items[0].value} {unit}</Text>
-            </View>
-          ),
-        }}
-        curved
-        hideDataPoints
-        rulesType="solid"
-        rulesColor="#E2E8F0"
-        yAxisLabelSuffix={unit === '%' ? '%' : ''}
-        maxValue={maxValue}
-      />
+      <View style={styles.chartWrapper}>
+        <LineChart
+          data={data.map(d => ({ value: d.value }))}
+          width={chartWidth}
+          height={200}
+          spacing={spacing}
+          initialSpacing={10}
+          color={currentTheme.color}
+          thickness={3}
+          startFillColor={currentTheme.color}
+          endFillColor="transparent"
+          startOpacity={0.4}
+          endOpacity={0}
+          noOfSections={4}
+          yAxisColor="#CBD5E1"
+          yAxisThickness={1}
+          yAxisLabelWidth={30}
+          yAxisTextStyle={{ color: '#64748B', fontSize: 10 }}
+          xAxisColor="rgba(226, 232, 240, 0.4)"
+          hideRules={false}
+          rulesLength={chartWidth}
+          xAxisLabelTextStyle={{ fontSize: 0 }}
+          pointerConfig={{
+            pointerStripHeight: 160,
+            pointerStripColor: '#94A3B8',
+            pointerStripWidth: 2,
+            pointerColor: currentTheme.color,
+            radius: 6,
+            pointerLabelComponent: (items: any) => (
+              <View style={styles.labelContainer}>
+                <Text style={styles.labelText}>{items[0].value.toFixed(1)} {unit}</Text>
+              </View>
+            ),
+          }}
+          curved
+          hideDataPoints
+          rulesType="solid"
+          rulesColor="rgba(226, 232, 240, 0.5)"
+          yAxisLabelSuffix={unit === '%' ? '%' : ''}
+          maxValue={maxValue}
+          backgroundColor="transparent"
+        />
+      </View>
       
       <View style={styles.footer}>
-        <Text style={styles.timeLabel}>{data[0]?.label || ''}</Text>
-        <Text style={styles.timeLabel}>{data[Math.floor(data.length / 2)]?.label || ''}</Text>
-        <Text style={styles.timeLabel}>{data[data.length - 1]?.label || ''}</Text>
+        {footerLabels.map((label, i) => (
+          <Text key={i} style={styles.timeLabel}>{label}</Text>
+        ))}
       </View>
     </View>
   );
@@ -111,17 +152,13 @@ const TrendChart = ({ data, title, unit, theme, maxValue }: TrendChartProps) => 
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
     borderRadius: 16,
-    padding: 16,
+    padding: 8,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
+    borderColor: 'rgba(226, 232, 240, 0.1)',
+    overflow: 'hidden',
   },
   header: {
     flexDirection: 'row',
@@ -132,7 +169,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#1E293B',
+    color: 'rgba(255, 255, 255, 0.9)',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -146,11 +183,17 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '900',
   },
+  chartWrapper: {
+    width: '100%',
+    overflow: 'hidden',
+    alignItems: 'flex-start',
+    paddingBottom: 5,
+  },
   emptyState: {
     height: 180,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 12,
   },
   emptyText: {
@@ -158,7 +201,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   labelContainer: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#6366F1',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
@@ -174,12 +217,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 10,
-    paddingHorizontal: 20,
+    paddingHorizontal: 10,
+    paddingBottom: 5,
   },
   timeLabel: {
     fontSize: 10,
-    color: '#94A3B8',
-    fontWeight: '600',
+    color: '#CBD5E1',
+    fontWeight: '700',
   },
 });
 

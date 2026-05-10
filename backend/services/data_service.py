@@ -20,7 +20,7 @@ def get_incident_telemetry(unit_id: str, start_time: str, end_time: str):
         filtered = unit_data.loc[mask].sort_values('timestamp')
         
         # Select relevant columns for charting
-        result = filtered[['timestamp', 'vibration', 'airflow', 'temp', 'power', 'risk_score']].copy()
+        result = filtered[['timestamp', 'vibration', 'airflow', 'temp', 'pressure', 'power', 'risk_score']].copy()
         
         # Convert timestamp to string for JSON (Format: HH:mm)
         result['timestamp'] = result['timestamp'].dt.strftime('%H:%M')
@@ -101,6 +101,7 @@ def get_health_scores():
             "avg_temp": row["temp"],
             "avg_airflow": row["airflow"],
             "avg_vibration": row["vibration"],
+            "avg_pressure": row["pressure"],
             "avg_power": row["power"],
         })
 
